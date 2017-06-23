@@ -2,46 +2,62 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define T 3
+int T;
 
 typedef struct btree_block {
     int degree; // o grau do bloco
     int * keys; // receberá espaço de memória equivalente a 2T - 1
-    struct btree_block ** sons; // receberá espaço de memória equivalente a 2T
+    struct btree_block ** children; // receberá espaço de memória equivalente a 2T
     struct btree_block * father;
 } block;
 
+typedef struct btree_promote_info {
+    int promoted_val;
+    block * new_child;
+} promote_info;
+
 block * initialize(void);
+block * insert(block * tree, int val);
 
 int main(void) {
+    scanf("%d\n", &T);
     return 0;
 }
 
 block * initialize(void) {
-    block * new_btree;
+    block * new_btree = (block *) malloc(sizeof(block));
     new_btree->degree = 0;
 
-    new_btree->keys = (int*) malloc(sizeof(int) * (2 * T  - 1));
-    memset(new_btree->keys, 0, sizeof(int) * (2 * T - 1));
+    new_btree->keys = (int *) malloc(sizeof(int) * (2 * T  - 1));
 
-    new_btree->sons = (block**) malloc(sizeof(block) * 2 * T);
-    memset(new_btree->sons, 0, sizeof(block) * 2 * T);
+    new_btree->children = (block **) malloc(sizeof(block) * 2 * T);
+    memset(new_btree->children, 0, sizeof(block) * 2 * T); // seta os ponteiros para os filhos como NULL
 
     new_btree->father = NULL;
 
     return new_btree;
 }
 
-block * insert(block * tree, int val) {
+promote_info * _insert(block * tree, int val) {
 
-    if (tree->sons[0] != NULL) {
+    promote_info promote;
+    block * aux_tree;
+
+    for (int i = 0; i < tree->degree - 1; i++) {
+        if (tree->keys[i] == val) return;
+    }
+
+    if (tree->children[0] != NULL) {
         //se este bloco não é uma folha
 
         for (int i = 0; i < tree->degree - 1; i++) {
             if (val < tree->keys[i]) {
                 //tem que ser inserido no filho à esquerda de keys[i]
+                promote = _insert(tree->children[i], int val);
+                if (promote->new_child != NULL) {
+                    //tem que fazer promote
 
-                tree
+                }
             }
         }
 
@@ -49,4 +65,35 @@ block * insert(block * tree, int val) {
     }
 
     //se for uma folha
+    if (tree->degree == 2 * T) {
+        //vai ter que fazer promote
+        promote->new_child = initialize();
+        
+        for (int i = T - 1; i < 2 * T - 1; i++) {
+            promote->new_child->keys[i - T + 1] = tree->keys[i];
+            promote->promoted_val = tree->keys[T];
+        }
+
+        if (val < promote->promoted_val) aux_tree = tree;
+        else aux_tree = promote->new_child;
+
+        aux_tree->degree++;
+        aux_tree[T - 1] = val;
+
+        return promote;
+    }
 }
+block * insert(block * tree, int val) {
+    block * pr = _insert(tree, val); //possível raiz
+    return pr == NULL ? tree : pr;
+}
+
+void _print_tree(block * tree, int level) {
+    if (tree == NULL) return;
+    for (int i = 0; i < tree->degree - 1; i++) {
+        print_tree(tree->children[i], level + 1);
+        printf("%d\n", tree->val[i]);
+    }
+    _print_tree(tree->children[degree - 1], level + 1);
+}
+void print_tree(block * tree) { return _print_tree(tree, 0); }
