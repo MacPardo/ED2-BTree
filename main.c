@@ -42,6 +42,7 @@ promote_info * _insert(block * tree, int val) {
 
     promote_info promote;
     block * aux_tree;
+    int i;
 
     for (int i = 0; i < tree->degree - 1; i++) {
         if (tree->keys[i] == val) return;
@@ -50,18 +51,29 @@ promote_info * _insert(block * tree, int val) {
     if (tree->children[0] != NULL) {
         //se este bloco não é uma folha
 
-        for (int i = 0; i < tree->degree - 1; i++) {
-            if (val < tree->keys[i]) {
-                //tem que ser inserido no filho à esquerda de keys[i]
-                promote = _insert(tree->children[i], int val);
-                if (promote->new_child != NULL) {
-                    //tem que fazer promote
+        //for (int i = 0; i < tree->degree - 1; i++) {
+        //    if (val < tree->keys[i]) {
+        //        //tem que ser inserido no filho à esquerda de keys[i]
+        //        promote = _insert(tree->children[i], int val);
+        //    }
+        //}
 
-                }
-            }
+        //// se passou do for tem que ser inserido no último filho
+        //promote = _insert(tree->children[tree->degree - 1], int val);
+        
+        for (i = 0; i < tree->degree - 1 && val > tree->keys[i]; i++);
+
+        promote = _insert(tree->children[i], val);
+
+        if (promote->new_child != NULL) {
+            //TODO
+            //tem que fazer promote do filho:(
+            //
+            //talvez tenha que fazer promote do atual tbm
         }
 
-        // se passou do for tem que ser inserido no último filho
+        promote->new_child = NULL;
+        return promote;
     }
 
     //se for uma folha
@@ -69,7 +81,8 @@ promote_info * _insert(block * tree, int val) {
         //vai ter que fazer promote
         promote->new_child = initialize();
         
-        for (int i = T - 1; i < 2 * T - 1; i++) {
+        //copia todos as keys depois da key promovida para o novo nodo à direita
+        for (i = T - 1; i < 2 * T - 1; i++) {
             promote->new_child->keys[i - T + 1] = tree->keys[i];
             promote->promoted_val = tree->keys[T];
         }
@@ -82,9 +95,14 @@ promote_info * _insert(block * tree, int val) {
 
         return promote;
     }
+
+    tree->children[tree->degree - 1] = val;
+    tree->degree++;
+
+    return promote;
 }
 block * insert(block * tree, int val) {
-    block * pr = _insert(tree, val); //possível raiz
+    promote_info * pr = _insert(tree, val); //possível raiz
     return pr == NULL ? tree : pr;
 }
 
