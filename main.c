@@ -40,7 +40,7 @@ block * initialize(void) {
 
 promote_info * _insert(block * tree, int val) {
 
-    promote_info promote;
+    promote_info promote_receive, promote_send;
     block * aux_tree;
     int i;
 
@@ -50,26 +50,21 @@ promote_info * _insert(block * tree, int val) {
 
     if (tree->children[0] != NULL) {
         //se este bloco não é uma folha
-
-        //for (int i = 0; i < tree->degree - 1; i++) {
-        //    if (val < tree->keys[i]) {
-        //        //tem que ser inserido no filho à esquerda de keys[i]
-        //        promote = _insert(tree->children[i], int val);
-        //    }
-        //}
-
-        //// se passou do for tem que ser inserido no último filho
-        //promote = _insert(tree->children[tree->degree - 1], int val);
         
         for (i = 0; i < tree->degree - 1 && val > tree->keys[i]; i++);
 
-        promote = _insert(tree->children[i], val);
+        promote_receive = _insert(tree->children[i], val);
 
-        if (promote->new_child != NULL) {
+        if (promote_receive->new_child != NULL) {
             //TODO
             //tem que fazer promote do filho:(
             //
             //talvez tenha que fazer promote do atual tbm
+            
+            if (tree->degree == 2 * T) {
+                //tem que fazer split e promote
+            }
+            //não tem que fazer split e promote
         }
 
         promote->new_child = NULL;
