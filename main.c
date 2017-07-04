@@ -23,10 +23,10 @@ void print_tree(block * tree);
 int main(void) {
     int opcao, value;
 
-    block * tree = initialize();
-
     printf("Valor a ser usado para T: ");
     scanf("%d", &T);
+
+    block * tree = initialize();
 
     do {
         printf("\n1 - Inserir um elemento\n");
