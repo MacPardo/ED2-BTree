@@ -42,6 +42,7 @@ int main(void) {
             tree = insert(tree, value);
         }
         else if (opcao == 2) {
+            printf("Valores:\n\n");
             print_tree(tree);
         }
     } while (opcao);
@@ -135,20 +136,28 @@ promote_info _insert(block * tree, int val) {
 
     //se for uma folha ou se a raiz não tiver filhos
 
-    if (tree->degree == 2 * T) {// vai ter que fazer promote
+    if (tree->degree == 2 * T) {
         promote_send.new_child = initialize();
+        promote_send.new_child->degree = T;
+        promote_send.promoted_key = tree->keys[T - 1];
 
-        //copia todos as keys depois da key promovida para o novo nodo à direita
-        for (i = T - 1; i < 2 * T - 1; i++) {
-            promote_send.new_child->keys[i - T + 1] = tree->keys[i];
-            promote_send.promoted_key = tree->keys[T];
+        for (i = T; i < 2 * T - 1; i++) {
+            promote_send.new_child->keys[i] = tree->keys[i];
+            promote_send.new_child->children[i] = tree->children[i];
         }
+        promote_send.new_child->children[2 * T - 1] = tree->children[2 * T - 1];
 
-        if (val < promote_send.promoted_key) aux_tree = tree;
-        else aux_tree = promote_send.new_child;
+        tree->degree = T;
 
-        aux_tree->degree++;
-        aux_tree->keys[T - 1] = val;
+        promote_receive.children[0] = NULL; //aqui o promote receive só serve de auxiliar
+        promote_receive.promoted_key = val;
+
+        if (val < promote_send.promoted_key) {
+            tree = insert_in_block(tree, promote_receive);
+        }
+        else {
+            promote_send.new_child = insert_in_block(promote_send.new_child, promote_receive);
+        }
 
         return promote_send;
     }
