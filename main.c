@@ -17,7 +17,7 @@ typedef struct btree_promote_info {
 } promote_info;
 
 block * initialize(void);
-block * insert(block * tree, int val);
+block * insert(block * tree, int key);
 void print_tree(block * tree);
 
 int main(void) {
@@ -25,6 +25,11 @@ int main(void) {
 
     printf("Valor a ser usado para T: ");
     scanf("%d", &T);
+
+    if (T < 2) {
+        printf("T nao pode ser menor do que 2, entao sera usado T = 2\n");
+        T = 2;
+    }
 
     block * tree = initialize();
 
@@ -54,6 +59,7 @@ block * initialize(void) {
     new_btree->degree = 1;
 
     new_btree->keys = (int *) malloc(sizeof(int) * (2 * T  - 1));
+    memset(new_btree->keys, -1, sizeof(int) * (2 * T  - 1));
 
     new_btree->children = (block **) malloc(sizeof(block *) * 2 * T);
     memset(new_btree->children, 0, sizeof(block *) * 2 * T); // seta os ponteiros para os filhos como NULL
@@ -96,38 +102,67 @@ void insert_in_block(block * tree, promote_info promote_receive) {
     tree->degree++;
 }
 
-promote_info _insert(block * tree, int val) {
+promote_info split(block * tree, promote_info promote_receive) {
+    //faz o split e retorna o irmão que ficará à direita de tree e ja insere em um dos irmãos
+    int i;
+    promote_info promote_send;
+
+    promote_send.new_child = initialize();
+    promote_send.new_child->degree = T;
+    promote_send.promoted_key = tree->keys[T - 1];
+
+    for (i = T; i < 2 * T - 1; i++) {
+        promote_send.new_child->keys[i - T] = tree->keys[i];
+        promote_send.new_child->children[i - T] = tree->children[i];
+    }
+    promote_send.new_child->children[T - 1] = tree->children[2 * T - 1];
+
+    tree->degree = T;
+
+    if (promote_receive.promoted_key < promote_send.promoted_key) {
+        insert_in_block(tree, promote_receive);
+    }
+    else {
+        insert_in_block(promote_send.new_child, promote_receive);
+    }
+
+
+    return promote_send;
+}
+
+promote_info _insert(block * tree, int key) {
 
     promote_info promote_receive, promote_send;
-    block * aux_tree;
     int i;
 
     promote_send.new_child = NULL;
 
     for (i = 0; i < tree->degree - 1; i++) { //se a key já existir, retorna um promote_info vazio
-        if (tree->keys[i] == val) {
+        if (tree->keys[i] == key) {
             return promote_send;
         }
     }
 
+    //se não é uma folha
     if (tree->children[0] != NULL) {
-        //se este bloco não é uma folha
 
-        for (i = 0; i < tree->degree - 1 && val > tree->keys[i]; i++);
+        for (i = 0; i < tree->degree - 1 && key > tree->keys[i]; i++);
 
-        promote_receive = _insert(tree->children[i], val);
+        promote_receive = _insert(tree->children[i], key);
 
         if (promote_receive.new_child != NULL) {
-            //TODO
-            //tem que fazer promote do filho:(
+            //tem que fazer promote do filho
 
             if (tree->degree == 2 * T) {
                 //tem que fazer split e promote deste bloco
-                //a key promovida vai ser a de índice T
+                //a key promovida vai ser a de índice T - 1
 
-
+                promote_send = split(tree, promote_receive);
+                return promote_send;
             }
             //não tem que fazer split e promote
+
+            insert_in_block(tree, promote_receive);
         }
 
         promote_send.new_child = NULL;
@@ -137,48 +172,27 @@ promote_info _insert(block * tree, int val) {
     //se for uma folha ou se a raiz não tiver filhos
 
     if (tree->degree == 2 * T) {
-        promote_send.new_child = initialize();
-        promote_send.new_child->degree = T;
-        promote_send.promoted_key = tree->keys[T - 1];
+        promote_receive.new_child = NULL; //aqui o promote receive só serve de auxiliar
+        promote_receive.promoted_key = key;
 
-        for (i = T; i < 2 * T - 1; i++) {
-            promote_send.new_child->keys[i] = tree->keys[i];
-            promote_send.new_child->children[i] = tree->children[i];
-        }
-        promote_send.new_child->children[2 * T - 1] = tree->children[2 * T - 1];
-
-        tree->degree = T;
-
-        promote_receive.children[0] = NULL; //aqui o promote receive só serve de auxiliar
-        promote_receive.promoted_key = val;
-
-        if (val < promote_send.promoted_key) {
-            tree = insert_in_block(tree, promote_receive);
-        }
-        else {
-            promote_send.new_child = insert_in_block(promote_send.new_child, promote_receive);
-        }
+        promote_send = split(tree, promote_receive);
 
         return promote_send;
     }
 
     //não vai ter que fazer promote
-
-    //printf("tree->degree - 1 = %d\n", tree->degree - 1);
-    //tree->keys[tree->degree - 1] = val;
-    //tree->degree++;
     
-    promote_receive.promoted_key = val;
+    promote_receive.promoted_key = key;
     promote_receive.new_child = NULL;
     insert_in_block(tree, promote_receive);
 
     return promote_send;
 }
-block * insert(block * tree, int val) {
-    promote_info pr = _insert(tree, val); //possível nova raiz
+block * insert(block * tree, int key) {
+    promote_info pr = _insert(tree, key); //possível nova raiz
 
     if (pr.new_child != NULL) { //tem que criar uma nova raiz
-        block * new_root = (block *) malloc(sizeof(block));
+        block * new_root = initialize();
         new_root->degree = 2;
         new_root->children[0] = tree;
         new_root->children[1] = pr.new_child;
@@ -193,10 +207,11 @@ block * insert(block * tree, int val) {
 
 void _print_tree(block * tree, int level) {
     if (tree == NULL) return;
-    for (int i = 0; i < tree->degree - 1; i++) {
-        _print_tree(tree->children[i], level + 1);
-        printf("%d\n", tree->keys[i]);
-    }
     _print_tree(tree->children[tree->degree - 1], level + 1);
+    for (int i = tree->degree - 2; i >= 0; i--) {
+        for(int j = 0; j < level; j++) printf("    ");
+        printf("%d\n", tree->keys[i]);
+        _print_tree(tree->children[i], level + 1);
+    }
 }
 void print_tree(block * tree) { _print_tree(tree, 0); }
